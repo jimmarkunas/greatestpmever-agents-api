@@ -2,7 +2,7 @@ import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
-import { getSupabaseClient } from './db';
+import { getDbPool } from './db';
 
 const app = express();
 const port = Number.parseInt(process.env.PORT ?? '3001', 10);
@@ -32,6 +32,16 @@ app.get('/health', (_request, response) => {
     service: 'greatestpmever-agents-api',
     version: '1.0.0',
   });
+});
+
+app.get('/health/db', async (_request, response) => {
+  try {
+    const [rows] = await getDbPool().execute('SELECT 1 AS ok');
+    response.json({ status: 'ok', db: rows });
+  } catch (error) {
+    console.error('Database health check failed', error);
+    response.status(500).json({ status: 'error' });
+  }
 });
 
 const domainStatuses = ['DEFINED', 'PARTIAL', 'UNCLEAR'] as const;
@@ -81,23 +91,34 @@ app.post('/assessments', async (request, response) => {
   const assessment = request.body;
 
   try {
-    const { error } = await getSupabaseClient().from('assessments').insert({
-      assessment_id: assessment.assessmentId,
-      campaign: assessment.campaign,
-      agent_name: assessment.agentName,
-      agent_description: assessment.agentDescription,
-      result: assessment.result,
-      authority: assessment.authority,
-      guardrails: assessment.guardrails,
-      evidence: assessment.evidence,
-      network: assessment.network,
-      transfer: assessment.transfer,
-      success: assessment.success,
-    });
-
-    if (error) {
-      throw error;
-    }
+    await getDbPool().execute(
+      `INSERT INTO assessments (
+        assessment_id,
+        campaign,
+        agent_name,
+        agent_description,
+        result,
+        authority,
+        guardrails,
+        evidence,
+        network,
+        transfer,
+        success
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        assessment.assessmentId,
+        assessment.campaign,
+        assessment.agentName,
+        assessment.agentDescription,
+        assessment.result,
+        assessment.authority,
+        assessment.guardrails,
+        assessment.evidence,
+        assessment.network,
+        assessment.transfer,
+        assessment.success,
+      ],
+    );
 
     response.status(201).json({
       status: 'saved',
