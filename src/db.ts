@@ -1,5 +1,14 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import mysql, { Pool } from 'mysql2/promise';
+import path from 'node:path';
+
+dotenv.config();
+
+if (!process.env.DB_HOST) {
+  dotenv.config({
+    path: path.resolve(__dirname, '../../../../config/.env'),
+  });
+}
 
 let pool: Pool | undefined;
 
