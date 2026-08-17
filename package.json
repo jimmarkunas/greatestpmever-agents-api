@@ -21,10 +21,11 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
-    "mysql2": "^3.23.3",
+    "pg": "^8.13.1",
     "typescript": "^5.7.2"
   },
   "devDependencies": {
+    "@types/pg": "^8.11.10",
     "tsx": "^4.19.2"
   }
 }

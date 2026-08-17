@@ -36,7 +36,7 @@ app.get('/health', (_request, response) => {
 
 app.get('/health/db', async (_request, response) => {
   try {
-    await getDbPool().execute('SELECT 1 AS ok');
+    await getDbPool().query('SELECT 1 AS ok');
     response.json({
       status: 'ok',
       database: 'connected',

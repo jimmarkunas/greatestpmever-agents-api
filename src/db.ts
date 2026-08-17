@@ -1,10 +1,10 @@
 import dotenv from 'dotenv';
-import mysql, { Pool } from 'mysql2/promise';
+import { Pool } from 'pg';
 import path from 'node:path';
 
 dotenv.config();
 
-if (!process.env.DB_HOST) {
+if (!process.env.DATABASE_URL) {
   dotenv.config({
     path: path.resolve(__dirname, '../../../../config/.env'),
   });
@@ -17,31 +17,13 @@ export function getDbPool(): Pool {
     return pool;
   }
 
-  const requiredEnvironmentVariables = [
-    'DB_HOST',
-    'DB_NAME',
-    'DB_USER',
-    'DB_PASSWORD',
-  ] as const;
-
-  for (const variable of requiredEnvironmentVariables) {
-    if (!process.env[variable]) {
-      throw new Error(`Missing required environment variable: ${variable}`);
-    }
+  if (!process.env.DATABASE_URL) {
+    throw new Error('Missing required environment variable: DATABASE_URL');
   }
 
-  const configuredPort = Number.parseInt(process.env.DB_PORT ?? '3306', 10);
-  const port = Number.isNaN(configuredPort) ? 3306 : configuredPort;
-
-  pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    port,
-    database: process.env.DB_NAME,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
   });
 
   return pool;
