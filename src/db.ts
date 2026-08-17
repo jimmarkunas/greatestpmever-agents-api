@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { Pool } from 'pg';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import path from 'node:path';
 
 dotenv.config();
@@ -10,21 +10,43 @@ if (!process.env.DATABASE_URL) {
   });
 }
 
-let pool: Pool | undefined;
+let supabaseClient: SupabaseClient | undefined;
 
-export function getDbPool(): Pool {
-  if (pool) {
-    return pool;
+export function getSupabaseClient(): SupabaseClient {
+  if (supabaseClient) {
+    return supabaseClient;
   }
 
-  if (!process.env.DATABASE_URL) {
-    throw new Error('Missing required environment variable: DATABASE_URL');
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseApiKey = process.env.SUPABASE_API_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error('Missing required environment variable: SUPABASE_URL');
   }
 
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+  if (!supabaseApiKey) {
+    throw new Error('Missing required environment variable: SUPABASE_API_KEY');
+  }
+
+  supabaseClient = createClient(supabaseUrl, supabaseApiKey);
+
+  return supabaseClient;
+}
+
+export async function checkSupabaseDataApi(): Promise<void> {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseApiKey = process.env.SUPABASE_API_KEY;
+
+  getSupabaseClient();
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+    headers: {
+      apikey: supabaseApiKey as string,
+      Authorization: `Bearer ${supabaseApiKey}`,
+    },
   });
 
-  return pool;
+  if (!response.ok) {
+    throw new Error(`Supabase Data API returned HTTP ${response.status}`);
+  }
 }

@@ -2,7 +2,7 @@ import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
-import { getDbPool } from './db';
+import { checkSupabaseDataApi } from './db';
 
 const app = express();
 const port = Number.parseInt(process.env.PORT ?? '3001', 10);
@@ -36,7 +36,7 @@ app.get('/health', (_request, response) => {
 
 app.get('/health/db', async (_request, response) => {
   try {
-    await getDbPool().query('SELECT 1 AS ok');
+    await checkSupabaseDataApi();
     response.json({
       status: 'ok',
       database: 'connected',
