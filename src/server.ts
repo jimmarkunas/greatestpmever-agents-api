@@ -2,6 +2,7 @@ import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import { getDbPool } from './db';
 
 const app = express();
 const port = Number.parseInt(process.env.PORT ?? '3001', 10);
@@ -31,6 +32,22 @@ app.get('/health', (_request, response) => {
     service: 'greatestpmever-agents-api',
     version: '1.0.0',
   });
+});
+
+app.get('/health/db', async (_request, response) => {
+  try {
+    await getDbPool().execute('SELECT 1 AS ok');
+    response.json({
+      status: 'ok',
+      database: 'connected',
+    });
+  } catch (error) {
+    console.error('Database health check failed', error);
+    response.status(500).json({
+      status: 'error',
+      database: 'unavailable',
+    });
+  }
 });
 
 app.use((_request, response) => {
