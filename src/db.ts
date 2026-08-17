@@ -32,21 +32,3 @@ export function getSupabaseClient(): SupabaseClient {
 
   return supabaseClient;
 }
-
-export async function checkSupabaseDataApi(): Promise<void> {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseApiKey = process.env.SUPABASE_API_KEY;
-
-  getSupabaseClient();
-
-  const response = await fetch(`${supabaseUrl}/rest/v1/`, {
-    headers: {
-      apikey: supabaseApiKey as string,
-      Authorization: `Bearer ${supabaseApiKey}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Supabase Data API returned HTTP ${response.status}`);
-  }
-}
