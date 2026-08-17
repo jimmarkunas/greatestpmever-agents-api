@@ -2,6 +2,7 @@ import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import { getSupabaseClient } from './db';
 
 const app = express();
 const port = Number.parseInt(process.env.PORT ?? '3001', 10);
@@ -31,6 +32,81 @@ app.get('/health', (_request, response) => {
     service: 'greatestpmever-agents-api',
     version: '1.0.0',
   });
+});
+
+const domainStatuses = ['DEFINED', 'PARTIAL', 'UNCLEAR'] as const;
+const results = ['GO', 'GO_WITH_CONDITIONS', 'NO_GO'] as const;
+
+type DomainStatus = (typeof domainStatuses)[number];
+type AssessmentResult = (typeof results)[number];
+
+type AssessmentRequest = {
+  assessmentId: string;
+  campaign: string | null;
+  agentName: string | null;
+  agentDescription: string | null;
+  result: AssessmentResult;
+  authority: DomainStatus;
+  guardrails: DomainStatus;
+  evidence: DomainStatus;
+  network: DomainStatus;
+  transfer: DomainStatus;
+  success: DomainStatus;
+};
+
+function isAssessmentRequest(value: unknown): value is AssessmentRequest {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const body = value as Record<string, unknown>;
+  const nullableStrings = ['campaign', 'agentName', 'agentDescription'];
+  const requiredStrings = ['assessmentId'];
+  const statusFields = ['authority', 'guardrails', 'evidence', 'network', 'transfer', 'success'];
+
+  return (
+    requiredStrings.every((field) => typeof body[field] === 'string' && body[field] !== '') &&
+    nullableStrings.every((field) => body[field] === null || typeof body[field] === 'string') &&
+    results.includes(body.result as AssessmentResult) &&
+    statusFields.every((field) => domainStatuses.includes(body[field] as DomainStatus))
+  );
+}
+
+app.post('/assessments', async (request, response) => {
+  if (!isAssessmentRequest(request.body)) {
+    response.status(400).json({ status: 'error', error: 'invalid_request' });
+    return;
+  }
+
+  const assessment = request.body;
+
+  try {
+    const { error } = await getSupabaseClient().from('assessments').insert({
+      assessment_id: assessment.assessmentId,
+      campaign: assessment.campaign,
+      agent_name: assessment.agentName,
+      agent_description: assessment.agentDescription,
+      result: assessment.result,
+      authority: assessment.authority,
+      guardrails: assessment.guardrails,
+      evidence: assessment.evidence,
+      network: assessment.network,
+      transfer: assessment.transfer,
+      success: assessment.success,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    response.status(201).json({
+      status: 'saved',
+      assessmentId: assessment.assessmentId,
+    });
+  } catch (error) {
+    console.error('Assessment persistence failed', error);
+    response.status(500).json({ status: 'error' });
+  }
 });
 
 app.use((_request, response) => {
